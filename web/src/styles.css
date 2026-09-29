@@ -1,0 +1,44 @@
+:root[data-mantine-color-scheme='light'] {
+  --mantine-color-body: #f9f9f7;
+  --app-surface: #fcfcfb;
+  --app-border: rgba(11, 11, 11, 0.1);
+  --app-good: #006300;
+  --app-bad: #d03b3b;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --mantine-color-body: #0d0d0d;
+  --app-surface: #1a1a19;
+  --app-border: rgba(255, 255, 255, 0.1);
+  --app-good: #0ca30c;
+  --app-bad: #e66767;
+}
+
+.mantine-Card-root,
+.mantine-AppShell-navbar,
+.mantine-AppShell-header {
+  background: var(--app-surface);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.refetching {
+  opacity: 0.55;
+  transition: opacity 150ms ease;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: var(--mantine-color-default-hover);
+}

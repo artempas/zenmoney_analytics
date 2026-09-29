@@ -1,0 +1,14 @@
+node_modules/
+dist/
+data/
+*.db
+*.db-*
+*.log
+.env
+coverage/
+test-results/
+playwright-report/
+# ZenMoney exports contain personal data — never commit them
+*.csv
+!server/test/fixtures/*.csv
+server/test/*.local.test.ts

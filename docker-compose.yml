@@ -1,0 +1,18 @@
+services:
+  zenmoney-analytics:
+    image: ghcr.io/artempas/zenmoney_analytics:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # The address you open in the browser. Passkeys only work on this origin (https, or localhost).
+      APP_ORIGIN: http://localhost:3000
+      # Allow more than one account to be registered.
+      # ALLOW_REGISTRATION: "true"
+      # Set when running behind a reverse proxy (nginx, Caddy, Traefik).
+      # TRUST_PROXY: "true"
+    volumes:
+      - zenmoney-data:/data
+
+volumes:
+  zenmoney-data:
