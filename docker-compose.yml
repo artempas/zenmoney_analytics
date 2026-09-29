@@ -11,8 +11,14 @@ services:
       # ALLOW_REGISTRATION: "true"
       # Set when running behind a reverse proxy (nginx, Caddy, Traefik).
       # TRUST_PROXY: "true"
+      # Owner of the database files. With a host folder instead of the named volume, set these
+      # to the folder owner (e.g. on Synology: PUID=1026, PGID=100; see `id` over SSH).
+      # PUID: "1000"
+      # PGID: "1000"
     volumes:
       - zenmoney-data:/data
+      # Or a host folder:
+      # - /volume1/docker/zenmoney:/data
 
 volumes:
   zenmoney-data:

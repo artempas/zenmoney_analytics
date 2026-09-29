@@ -31,9 +31,13 @@ RUN npm ci --omit=dev --ignore-scripts --workspace server && mkdir -p server/nod
 
 # ---- Runtime ----
 FROM ${NODE_IMAGE}
+# The app runs as PUID:PGID (default: the image's "node" user, 1000:1000).
+# The entrypoint starts as root only to hand the data directory to that user, then drops privileges.
 ENV NODE_ENV=production \
     PORT=3000 \
-    DATA_DIR=/data
+    DATA_DIR=/data \
+    PUID=1000 \
+    PGID=1000
 WORKDIR /app
 COPY --from=deps /app/package.json ./
 COPY --from=deps /app/node_modules ./node_modules
@@ -42,10 +46,11 @@ COPY --from=build /app/server/package.json ./server/
 COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/server/drizzle ./server/drizzle
 COPY --from=build /app/web/dist ./web/dist
+COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/zenmoney-entrypoint
 RUN mkdir -p /data && chown node:node /data
-USER node
 VOLUME ["/data"]
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+ENTRYPOINT ["zenmoney-entrypoint"]
 CMD ["node", "server/dist/index.js"]

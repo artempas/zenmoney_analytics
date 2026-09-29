@@ -1,10 +1,17 @@
 import path from 'node:path';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
-import { openDb } from './db/index.js';
+import { openDb, type Db } from './db/index.js';
 
 const config = loadConfig();
-const db = openDb(path.join(config.dataDir, 'zenmoney.db'));
+const dbFile = path.join(config.dataDir, 'zenmoney.db');
+let db: Db;
+try {
+  db = openDb(dbFile);
+} catch (e) {
+  console.error(`Cannot open database ${dbFile}: ${(e as Error).message}`);
+  process.exit(1);
+}
 const app = await buildApp(config, db);
 
 const shutdown = async (signal: string) => {
