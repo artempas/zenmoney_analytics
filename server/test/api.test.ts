@@ -241,6 +241,25 @@ describe('import and analytics', () => {
     expect(after.items[0]).toMatchObject({ type: 'transfer', reason: 'manual' });
   });
 
+  it('rolls back an import', async () => {
+    const [rec] = await get<{ id: number }[]>(t, '/api/imports');
+    const res = await t.app.inject({
+      method: 'DELETE',
+      url: `/api/imports/${rec!.id}`,
+      headers: { cookie: t.cookie },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ deleted: 19 });
+    expect((await get<{ id: number }[]>(t, '/api/imports')).length).toBe(0);
+    expect(await get<unknown[]>(t, '/api/accounts')).toEqual([]);
+    const again = await t.app.inject({
+      method: 'DELETE',
+      url: `/api/imports/${rec!.id}`,
+      headers: { cookie: t.cookie },
+    });
+    expect(again.statusCode).toBe(404);
+  });
+
   it('filters transactions by category, type and text', async () => {
     const food = await get<TransactionsResponse>(
       t,

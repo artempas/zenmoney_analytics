@@ -134,3 +134,53 @@ export function importTransactions(
     return { importId: importRow.id, dateFrom, dateTo, rows: rows.length, replaced, newAccounts };
   });
 }
+
+/**
+ * Removes the transactions that came from the given import and the import record itself.
+ * Rows that a later import already replaced are gone for good and are not restored.
+ * Returns the number of deleted transactions, or null if the import does not exist.
+ */
+export function rollbackImport(db: Db, userId: number, importId: number): number | null {
+  return db.transaction((tx) => {
+    const record = tx
+      .select({ id: imports.id })
+      .from(imports)
+      .where(and(eq(imports.id, importId), eq(imports.userId, userId)))
+      .get();
+    if (!record) return null;
+
+    const deleted =
+      tx
+        .select({ n: sql<number>`count(*)` })
+        .from(transactions)
+        .where(and(eq(transactions.userId, userId), eq(transactions.importId, importId)))
+        .get()?.n ?? 0;
+    tx.delete(transactions)
+      .where(and(eq(transactions.userId, userId), eq(transactions.importId, importId)))
+      .run();
+    tx.delete(imports)
+      .where(and(eq(imports.id, importId), eq(imports.userId, userId)))
+      .run();
+
+    // Drop auto-detected accounts that no remaining transaction refers to.
+    const used = new Set<string>();
+    for (const r of tx
+      .select({ o: transactions.outAccount, i: transactions.inAccount })
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .all()) {
+      if (r.o) used.add(r.o);
+      if (r.i) used.add(r.i);
+    }
+    for (const a of tx
+      .select({ id: accounts.id, name: accounts.name, kindAuto: accounts.kindAuto })
+      .from(accounts)
+      .where(eq(accounts.userId, userId))
+      .all()) {
+      if (a.kindAuto && !used.has(a.name)) tx.delete(accounts).where(eq(accounts.id, a.id)).run();
+    }
+
+    reclassifyUser(db, userId);
+    return deleted;
+  });
+}

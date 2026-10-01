@@ -15,6 +15,7 @@ export function ImportPage() {
   const queryClient = useQueryClient();
   const [result, setResult] = useState<ImportResult | null>(null);
   const [confirmOpen, confirm] = useDisclosure(false);
+  const [rollbackTarget, setRollbackTarget] = useState<ImportRecord | null>(null);
   const history = useQuery({
     queryKey: ['imports'],
     queryFn: () => api<ImportRecord[]>('/api/imports'),
@@ -47,6 +48,23 @@ export function ImportPage() {
       setResult(null);
       await queryClient.invalidateQueries();
       notifications.show({ message: 'Все данные удалены', color: 'brand' });
+    },
+  });
+
+  const rollback = useMutation({
+    mutationFn: (id: number) => api(`/api/imports/${id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      setRollbackTarget(null);
+      setResult(null);
+      await queryClient.invalidateQueries();
+      notifications.show({ message: 'Загрузка отменена', color: 'brand' });
+    },
+    onError: (e) => {
+      notifications.show({
+        title: 'Не удалось откатить загрузку',
+        message: (e as Error).message,
+        color: 'red',
+      });
     },
   });
 
@@ -138,6 +156,7 @@ export function ImportPage() {
                   <Table.Th>Файл</Table.Th>
                   <Table.Th>Период</Table.Th>
                   <Table.Th ta="right">Операций</Table.Th>
+                  <Table.Th />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -153,6 +172,16 @@ export function ImportPage() {
                       {dateShort(h.dateFrom)} – {dateShort(h.dateTo)}
                     </Table.Td>
                     <Table.Td ta="right">{h.rows}</Table.Td>
+                    <Table.Td ta="right">
+                      <Button
+                        size="compact-xs"
+                        color="red"
+                        variant="subtle"
+                        onClick={() => setRollbackTarget(h)}
+                      >
+                        Откатить
+                      </Button>
+                    </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
@@ -183,6 +212,30 @@ export function ImportPage() {
           </Button>
         </Group>
       </Card>
+
+      <Modal
+        opened={rollbackTarget !== null}
+        onClose={() => setRollbackTarget(null)}
+        title="Откатить загрузку?"
+        centered
+      >
+        <Text size="sm" mb="md">
+          Операции из файла «{rollbackTarget?.filename}» будут удалены. Данные, которые эта загрузка
+          заменила ранее, не восстанавливаются — при необходимости загрузите нужный файл заново.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setRollbackTarget(null)}>
+            Отмена
+          </Button>
+          <Button
+            color="red"
+            loading={rollback.isPending}
+            onClick={() => rollbackTarget && rollback.mutate(rollbackTarget.id)}
+          >
+            Откатить
+          </Button>
+        </Group>
+      </Modal>
 
       <Modal opened={confirmOpen} onClose={confirm.close} title="Удалить все данные?" centered>
         <Text size="sm" mb="md">
