@@ -4,7 +4,7 @@ import type { ImportRecord } from '@zm/shared';
 import type { Db } from '../db/index.js';
 import { accounts, imports, overrides, transactions } from '../db/schema.js';
 import { HttpError, requireUser } from '../http.js';
-import { importTransactions } from '../import/importService.js';
+import { importTransactions, rollbackImport } from '../import/importService.js';
 import { ImportError, parseZenmoneyCsv } from '../import/parseZenmoney.js';
 
 export async function importRoutes(app: FastifyInstance, opts: { db: Db }) {
@@ -42,6 +42,15 @@ export async function importRoutes(app: FastifyInstance, opts: { db: Db }) {
       .where(eq(imports.userId, me.id))
       .orderBy(desc(imports.id))
       .all();
+  });
+
+  app.delete('/api/imports/:id', async (request) => {
+    const me = requireUser(request);
+    const id = Number((request.params as { id: string }).id);
+    if (!Number.isInteger(id)) throw new HttpError(400, 'Некорректный идентификатор');
+    const deleted = rollbackImport(db, me.id, id);
+    if (deleted === null) throw new HttpError(404, 'Загрузка не найдена');
+    return { ok: true, deleted };
   });
 
   app.delete('/api/data', async (request) => {
